@@ -20,8 +20,7 @@ struct ContentView: View {
 
     @State private var remainingSeconds = 5 * 60
     @State private var isRunning = false
-    @State private var showSettings = false
-    @State private var showTutorial = false
+    @State private var activeSheet: ActiveSheet?
     @State private var timerTask: Task<Void, Never>?
     @State private var remoteController = RemoteClickController()
 
@@ -46,265 +45,322 @@ struct ContentView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let isLandscape = geometry.size.width > geometry.size.height
+            let layout = StageLayout(size: geometry.size)
 
-            NavigationStack {
-                ZStack {
-                    stageBackground
+            ZStack {
+                stageBackground
 
-                    if isFinalMinute {
-                        finalMinuteBackground
-                    }
+                if isFinalMinute {
+                    finalMinuteBackground
+                }
 
-                    if isLandscape {
-                        landscapeLayout(in: geometry.size)
-                    } else {
-                        portraitLayout(in: geometry.size)
-                    }
-                }
-                .navigationTitle("Open Micer Timer")
-                .timerNavigationStyle()
-                .toolbar {
-                    ToolbarItemGroup {
-                        Button {
-                            showTutorial = true
-                        } label: {
-                            Image(systemName: "questionmark.circle")
-                        }
-                        .accessibilityLabel("Show tutorial")
-                        .tint(.white)
+                VStack(spacing: layout.verticalSpacing) {
+                    headerStrip(isCompact: layout.isCompact)
+                        .padding(.horizontal, layout.outerPadding)
+                        .padding(.top, layout.topPadding)
 
-                        Button {
-                            showSettings = true
-                        } label: {
-                            Image(systemName: "gearshape.fill")
-                        }
-                        .accessibilityLabel("Open settings")
-                        .tint(.white)
-                    }
+                    timerDisplay(fontSize: timerFontSize(for: layout))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(.horizontal, layout.timerHorizontalPadding)
+                        .layoutPriority(2)
+
+                    ProgressView(value: progress)
+                        .tint(progressColor)
+                        .scaleEffect(x: 1, y: layout.progressHeightMultiplier, anchor: .center)
+                        .padding(.horizontal, layout.outerPadding)
+                        .accessibilityLabel("Timer progress")
+
+                    bottomPanel(layout: layout)
+                        .padding(.horizontal, layout.outerPadding)
+                        .padding(.bottom, layout.bottomPadding)
                 }
-                .onAppear {
-                    syncRemainingTimeIfNeeded()
-                    remoteController.startReceivingClicks { toggleTimer() }
-                    if !hasSeenTimerTutorial {
-                        showTutorial = true
-                        hasSeenTimerTutorial = true
-                    }
+                .frame(maxWidth: layout.contentMaxWidth, maxHeight: .infinity)
+            }
+            .onAppear {
+                syncRemainingTimeIfNeeded()
+                remoteController.startReceivingClicks { toggleTimer() }
+                if !hasSeenTimerTutorial {
+                    activeSheet = .tutorial
+                    hasSeenTimerTutorial = true
                 }
-                .onDisappear {
-                    timerTask?.cancel()
-                    remoteController.stopReceivingClicks()
-                }
-                .onChange(of: timerLengthSeconds) { _, _ in
-                    syncRemainingTimeIfNeeded()
-                }
-                .sheet(isPresented: $showTutorial) {
+            }
+            .onDisappear {
+                timerTask?.cancel()
+                remoteController.stopReceivingClicks()
+            }
+            .onChange(of: timerLengthSeconds) { _, _ in
+                syncRemainingTimeIfNeeded()
+            }
+            .sheet(item: $activeSheet) { sheet in
+                switch sheet {
+                case .tutorial:
                     TutorialView()
-                }
-                .sheet(isPresented: $showSettings) {
+                case .settings:
                     TimerSettingsView(
                         timerLengthSeconds: $timerLengthSeconds,
                         finalMinuteModeEnabled: $finalMinuteModeEnabled,
                         showStageRemoteHint: $showStageRemoteHint,
                         isTimerRunning: isRunning,
                         resetTimer: resetTimer,
-                        showTutorial: { showTutorial = true }
+                        showTutorial: showTutorialFromSettings
                     )
+                    .settingsSheetStyle()
                 }
             }
         }
         .ignoresSafeArea(edges: .bottom)
+        .macWindowSizing()
         .hardwareClickHandler { toggleTimer() }
     }
 
     private var stageBackground: some View {
-        LinearGradient(
-            colors: [Color.black, Color(red: 0.05, green: 0.06, blue: 0.07)],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-        .ignoresSafeArea()
+        Color.black
+            .overlay(alignment: .bottom) {
+                LinearGradient(
+                    colors: [.clear, Color(red: 0.09, green: 0.11, blue: 0.12)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(maxHeight: 420)
+            }
+            .ignoresSafeArea()
     }
 
     private var finalMinuteBackground: some View {
-        ZStack {
-            Color(red: 1, green: 0.84, blue: 0.04)
-
-            AngularGradient(
-                colors: [.red, .yellow, .orange, .red, .black, .red],
-                center: .center
-            )
-            .opacity(0.72)
-            .scaleEffect(1.8)
-
-            VStack(spacing: 0) {
-                ForEach(0..<14, id: \.self) { index in
-                    Rectangle()
-                        .fill(index.isMultiple(of: 2) ? .black.opacity(0.22) : .clear)
-                        .frame(height: 18)
-                    Spacer(minLength: 10)
-                }
+        Color(red: 1, green: 0.74, blue: 0.16)
+            .overlay(alignment: .bottom) {
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.18)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
             }
-            .rotationEffect(.degrees(-12))
-            .scaleEffect(1.3)
-        }
-        .ignoresSafeArea()
+            .ignoresSafeArea()
     }
 
-    private func portraitLayout(in size: CGSize) -> some View {
-        VStack(spacing: 14) {
+    private func headerStrip(isCompact: Bool) -> some View {
+        HStack(spacing: 10) {
+            Image("TimerLogo")
+                .resizable()
+                .scaledToFill()
+                .frame(width: 44, height: 44)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .accessibilityHidden(true)
+
+            Label(statusText, systemImage: statusIcon)
+                .font(.system(size: isCompact ? 15 : 18, weight: .black, design: .rounded))
+                .foregroundStyle(statusBadgeForeground)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .padding(.horizontal, isCompact ? 12 : 16)
+                .padding(.vertical, isCompact ? 8 : 10)
+                .background(statusBadgeBackground, in: Capsule())
+                .accessibilityLabel(statusText)
+
             Spacer(minLength: 8)
 
-            timerDisplay(fontSize: displayFontSize(for: size, isLandscape: false))
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            if !isCompact {
+                Text("Bluetooth: play/pause toggles timer")
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.78))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
 
-            stageControls
-                .padding(.horizontal, 18)
-                .padding(.bottom, showStageRemoteHint ? 0 : 18)
+            stageIconButton(systemImage: "questionmark.circle", accessibilityLabel: "Show tutorial") {
+                activeSheet = .tutorial
+            }
 
-            if showStageRemoteHint {
-                remoteStatus
-                    .padding(.horizontal, 18)
-                    .padding(.bottom, 16)
+            stageIconButton(systemImage: "gearshape.fill", accessibilityLabel: "Open settings") {
+                activeSheet = .settings
             }
         }
     }
 
-    private func landscapeLayout(in size: CGSize) -> some View {
-        HStack(spacing: 18) {
-            VStack(alignment: .leading, spacing: 14) {
-                timerDisplay(fontSize: displayFontSize(for: size, isLandscape: true))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-
-                ProgressView(value: progress)
-                    .tint(timerColor)
-                    .scaleEffect(x: 1, y: 4, anchor: .center)
-                    .accessibilityLabel("Timer progress")
-            }
-            .frame(maxWidth: .infinity)
-
-            VStack(spacing: 14) {
-                stageControls
-
-                if showStageRemoteHint {
-                    remoteStatus
-                }
-            }
-            .frame(width: min(350, max(280, size.width * 0.28)))
+    private func stageIconButton(systemImage: String, accessibilityLabel: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 44, height: 44)
+                .background(.white.opacity(0.1), in: Circle())
         }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 16)
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
     }
 
     private func timerDisplay(fontSize: CGFloat) -> some View {
-        VStack(spacing: isFinalMinute ? 10 : 8) {
+        VStack(spacing: isFinalMinute ? 6 : 8) {
             Text(displayedTime)
                 .font(.system(size: fontSize, weight: .black, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(timerTextColor)
                 .lineLimit(1)
-                .minimumScaleFactor(0.32)
+                .minimumScaleFactor(0.28)
                 .contentTransition(.numericText())
-                .shadow(color: isFinalMinute ? .black : timerTextColor.opacity(0.35), radius: isFinalMinute ? 0 : 12, x: isFinalMinute ? 7 : 0, y: isFinalMinute ? 7 : 0)
-                .shadow(color: isFinalMinute ? .white : .clear, radius: isFinalMinute ? 0 : 0, x: isFinalMinute ? -4 : 0, y: isFinalMinute ? -4 : 0)
-                .accessibilityLabel("Timer showing \(displayedTime)")
+                .shadow(color: timerShadowColor, radius: isFinalMinute ? 0 : 12, x: 0, y: isFinalMinute ? 0 : 4)
 
-            Text(statusText)
-                .font(.system(size: isFinalMinute ? 42 : 28, weight: .black, design: .rounded))
-                .foregroundStyle(statusTextColor)
-                .lineLimit(1)
-                .minimumScaleFactor(0.55)
+            if !isFinalMinute {
+                Text(isRunning ? "RUNNING" : remainingSeconds == 0 ? "TIME" : "READY")
+                    .font(.system(size: 28, weight: .black, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.84))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.65)
+            }
         }
-        .padding(.horizontal, isFinalMinute ? 8 : 0)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Timer, \(displayedTime), \(statusText)")
     }
 
-    private var stageControls: some View {
-        HStack(spacing: 12) {
+    private func bottomPanel(layout: StageLayout) -> some View {
+        Group {
+            if layout.useWideControls {
+                HStack(spacing: layout.controlSpacing) {
+                    stageControls(layout: layout)
+                        .frame(maxWidth: 520)
+
+                    if showStageRemoteHint {
+                        remoteHint(compact: false)
+                            .frame(maxWidth: 420)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            } else {
+                VStack(spacing: layout.controlSpacing) {
+                    stageControls(layout: layout)
+
+                    if showStageRemoteHint && !layout.isVeryShort {
+                        remoteHint(compact: layout.isCompact)
+                    }
+                }
+            }
+        }
+    }
+
+    private func stageControls(layout: StageLayout) -> some View {
+        HStack(spacing: 10) {
             Button(action: toggleTimer) {
                 Label(isRunning ? "Stop" : "Start", systemImage: isRunning ? "stop.fill" : "play.fill")
-                    .frame(maxWidth: .infinity, minHeight: 52)
+                    .frame(maxWidth: .infinity, minHeight: layout.controlHeight)
             }
             .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .tint(isRunning ? .red : Color(red: 1, green: 0.74, blue: 0.16))
             .keyboardShortcut(.space, modifiers: [])
             .keyboardShortcut(.return, modifiers: [])
 
             Button(action: resetTimer) {
-                Label("Reset", systemImage: "arrow.counterclockwise")
-                    .frame(maxWidth: .infinity, minHeight: 52)
+                Image(systemName: "arrow.counterclockwise")
+                    .frame(width: layout.iconButtonSize, height: layout.controlHeight)
             }
             .buttonStyle(.bordered)
+            .controlSize(.large)
             .disabled(isRunning && remainingSeconds > 0)
+            .accessibilityLabel("Reset timer")
 
             Button {
-                showSettings = true
+                activeSheet = .settings
             } label: {
                 Image(systemName: "gearshape.fill")
-                    .frame(width: 52, height: 52)
+                    .frame(width: layout.iconButtonSize, height: layout.controlHeight)
             }
             .buttonStyle(.bordered)
+            .controlSize(.large)
             .accessibilityLabel("Open timer settings")
         }
-        .font(.headline)
-        .padding(12)
-        .background(.white.opacity(isFinalMinute ? 0.96 : 0.9), in: RoundedRectangle(cornerRadius: 8))
+        .font(.headline.weight(.bold))
+        .padding(layout.controlPadding)
+        .background(.white.opacity(isFinalMinute ? 0.94 : 0.9), in: RoundedRectangle(cornerRadius: 8))
     }
 
-    private var remoteStatus: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Label("Bluetooth headphones ready", systemImage: "headphones")
-                .font(.headline)
+    private func remoteHint(compact: Bool) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "headphones")
+                .font(.title3.weight(.bold))
                 .foregroundStyle(.white)
+                .frame(width: 28)
 
-            Text("Press play/pause once to start and again to stop. The timer must stay open and visible for stage use.")
-                .font(.footnote)
-                .foregroundStyle(.white.opacity(0.82))
-                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Bluetooth headphones")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+
+                Text(compact ? "Play/pause starts or stops." : "Press play/pause once to start and again to stop. Keep this screen visible for the performer.")
+                    .font(.footnote)
+                    .foregroundStyle(.white.opacity(0.82))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(.black.opacity(0.45), in: RoundedRectangle(cornerRadius: 8))
+        .padding(compact ? 12 : 14)
+        .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
     }
 
     private var statusText: String {
         if remainingSeconds == 0 { return "TIME" }
-        if isFinalMinute { return "FINAL MINUTE" }
+        if isFinalMinute { return remainingSeconds == 60 ? "ONE MINUTE" : "FINAL COUNTDOWN" }
         return isRunning ? "RUNNING" : "READY"
     }
 
-    private var timerColor: Color {
+    private var statusIcon: String {
+        if remainingSeconds == 0 { return "flag.checkered" }
+        if isFinalMinute { return "exclamationmark.triangle.fill" }
+        return isRunning ? "timer" : "play.circle.fill"
+    }
+
+    private var progressColor: Color {
         if remainingSeconds == 0 { return .red }
-        if isFinalMinute { return .red }
-        return isRunning ? .green : .yellow
+        if isFinalMinute { return .black }
+        return isRunning ? Color(red: 1, green: 0.74, blue: 0.16) : .white.opacity(0.7)
     }
 
     private var timerTextColor: Color {
         if remainingSeconds == 0 { return .red }
-        if isFinalMinute { return .yellow }
+        if isFinalMinute { return .black }
         return .white
     }
 
-    private var statusTextColor: Color {
-        isFinalMinute ? .black : .white.opacity(0.85)
+    private var timerShadowColor: Color {
+        if isFinalMinute { return .clear }
+        return timerTextColor.opacity(0.24)
     }
 
-    private func displayFontSize(for size: CGSize, isLandscape: Bool) -> CGFloat {
+    private var statusBadgeForeground: Color {
+        isFinalMinute ? .white : .white
+    }
+
+    private var statusBadgeBackground: Color {
+        if remainingSeconds == 0 { return .red }
+        if isFinalMinute { return .black.opacity(0.82) }
+        return isRunning ? Color(red: 1, green: 0.74, blue: 0.16).opacity(0.24) : .white.opacity(0.12)
+    }
+
+    private func timerFontSize(for layout: StageLayout) -> CGFloat {
         if isFinalMinute {
-            return isLandscape ? min(size.width * 0.34, size.height * 0.82) : min(size.width * 0.58, size.height * 0.42)
+            return layout.isLandscape ? layout.size.height * 0.76 : layout.size.width * 0.64
         }
 
-        if isLandscape {
-            return min(size.width * 0.2, size.height * 0.56)
+        if layout.isLandscape {
+            return min(layout.size.width * 0.24, layout.size.height * 0.6)
         }
 
-        return min(size.width * 0.31, size.height * 0.24)
+        return min(layout.size.width * 0.36, layout.size.height * 0.27)
     }
 
     private func syncRemainingTimeIfNeeded() {
         if !isRunning {
             timerLengthSeconds = min(max(timerLengthSeconds, 60), 7200)
             remainingSeconds = timerLengthSeconds
+        }
+    }
+
+    private func showTutorialFromSettings() {
+        activeSheet = nil
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(250))
+            activeSheet = .tutorial
         }
     }
 
@@ -344,6 +400,85 @@ struct ContentView: View {
     private func resetTimer() {
         stopTimer()
         remainingSeconds = timerLengthSeconds
+    }
+}
+
+private enum ActiveSheet: Identifiable {
+    case settings
+    case tutorial
+
+    var id: Self { self }
+}
+
+private struct StageLayout {
+    let size: CGSize
+
+    var isLandscape: Bool {
+        size.width > size.height
+    }
+
+    var isCompact: Bool {
+        min(size.width, size.height) < 390
+    }
+
+    var isVeryShort: Bool {
+        size.height < 420
+    }
+
+    var useWideControls: Bool {
+#if os(macOS)
+        isLandscape && size.width >= 900
+#else
+        isLandscape && size.width >= 760
+#endif
+    }
+
+    var contentMaxWidth: CGFloat? {
+#if os(macOS)
+        min(max(size.width * 0.9, 520), 980)
+#else
+        nil
+#endif
+    }
+
+    var outerPadding: CGFloat {
+        min(max(size.width * 0.045, 16), 44)
+    }
+
+    var topPadding: CGFloat {
+        isCompact ? 8 : 14
+    }
+
+    var bottomPadding: CGFloat {
+        isCompact ? 14 : 22
+    }
+
+    var timerHorizontalPadding: CGFloat {
+        isLandscape ? outerPadding : max(10, outerPadding * 0.55)
+    }
+
+    var verticalSpacing: CGFloat {
+        isCompact ? 10 : 18
+    }
+
+    var controlSpacing: CGFloat {
+        isCompact ? 10 : 14
+    }
+
+    var controlHeight: CGFloat {
+        isCompact ? 48 : 56
+    }
+
+    var iconButtonSize: CGFloat {
+        isCompact ? 48 : 56
+    }
+
+    var controlPadding: CGFloat {
+        isCompact ? 8 : 12
+    }
+
+    var progressHeightMultiplier: CGFloat {
+        isCompact ? 3 : 4
     }
 }
 
@@ -455,29 +590,29 @@ private struct TutorialView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section("Bluetooth headphones") {
+                Section("Start Fast") {
+                    Label("Tap Start on the main screen to begin immediately.", systemImage: "play.fill")
+                    Label("Tap the gear button when you need to change the time.", systemImage: "gearshape.fill")
+                    Label("Tap Reset to return to the selected time.", systemImage: "arrow.counterclockwise")
+                }
+
+                Section("Bluetooth Headphones") {
                     Label("Open the iOS Settings app and pair the headphones first.", systemImage: "gear")
                     Label("Open this timer and leave the timer screen visible.", systemImage: "iphone")
                     Label("Press the headphone play/pause button once to start, then press it again to stop.", systemImage: "playpause.fill")
                 }
 
-                Section("Timer settings") {
-                    Label("Tap the gear button to edit minutes and seconds.", systemImage: "gearshape.fill")
-                    Label("Turn Comic Final-Minute Mode on for a huge, bright final countdown.", systemImage: "exclamationmark.bubble.fill")
-                    Label("Turn Bluetooth help on or off on the stage screen.", systemImage: "headphones")
+                Section("Stage Visibility") {
+                    Text("The timer fills the available screen on iPhone and iPad in portrait or landscape. During the final minute, 1:00 appears first, then the remaining seconds become giant single numbers: 59, 58, 57, and so on.")
                 }
 
-                Section("Other Bluetooth remotes") {
+                Section("Other Bluetooth Remotes") {
                     Label("Bluetooth media remotes use the same play/pause control.", systemImage: "dot.radiowaves.left.and.right")
                     Label("Presentation clickers can use Space, Return, arrow keys, Page Up, or Page Down.", systemImage: "keyboard")
                     Label("If the button controls another audio app, close that app and reopen this timer.", systemImage: "speaker.wave.2")
                 }
 
-                Section("Stage visibility") {
-                    Text("The timer uses oversized high-contrast digits and adapts to iPhone and iPad in portrait or landscape. During the final minute, 1:00 appears first, then the remaining seconds become giant single numbers: 59, 58, 57, and so on.")
-                }
-
-                Section("Selfie stick note") {
+                Section("Selfie Stick Note") {
                     Text("Selfie sticks do not all send the same signal. Models that send media or keyboard commands should work. Models that only trigger the system camera shutter or volume button are blocked by iOS for normal apps.")
                 }
             }
@@ -562,11 +697,17 @@ private final class RemoteClickController {
 }
 
 private extension View {
-    func timerNavigationStyle() -> some View {
+    func settingsSheetStyle() -> some View {
 #if os(iOS)
-        navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .toolbarBackground(.hidden, for: .navigationBar)
+        presentationDetents([.medium, .large])
+#else
+        frame(minWidth: 440, minHeight: 420)
+#endif
+    }
+
+    func macWindowSizing() -> some View {
+#if os(macOS)
+        frame(minWidth: 520, idealWidth: 760, minHeight: 460, idealHeight: 620)
 #else
         self
 #endif

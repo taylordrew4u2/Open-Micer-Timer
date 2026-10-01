@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Open Micer Timer screenshots</title>
+<style>
+  @font-face { font-family: Inter; font-weight: 400 800; font-display: block; src: url(fonts/Inter-latin.woff2) format('woff2'); }
+  @font-face { font-family: Nunito; font-weight: 700 900; font-display: block; src: url(fonts/Nunito-latin.woff2) format('woff2'); }
+
+  :root {
+    /* SF Pro / SF Pro Rounded when available (macOS), otherwise close open-source stand-ins. */
+    --ui: -apple-system, "SF Pro Text", Inter, system-ui, sans-serif;
+    --rounded: "SF Pro Rounded", Nunito, ui-rounded, sans-serif;
+    --yellow: rgb(255, 189, 41);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #000; overflow: hidden; -webkit-font-smoothing: antialiased; }
+
+  /* ---------- Marketing canvas ---------- */
+  .canvas { position: relative; overflow: hidden; font-family: var(--ui); }
+  .theme-dark { background: radial-gradient(120% 70% at 50% 0%, #1b1d21 0%, #0b0c0e 55%, #060607 100%); color: #fff; }
+  .theme-yellow { background: linear-gradient(180deg, #ffc93f 0%, var(--yellow) 60%, #f2ac12 100%); color: #000; }
+  .glow { position: absolute; width: calc(var(--u) * 760px); height: calc(var(--u) * 760px); transform: translate(-50%, -50%);
+          border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 189, 41, .26), rgba(255, 189, 41, 0)); pointer-events: none; }
+  .glow.red { background: radial-gradient(closest-side, rgba(255, 69, 58, .30), rgba(255, 69, 58, 0)); }
+  .theme-yellow .glow { background: radial-gradient(closest-side, rgba(255, 255, 255, .45), rgba(255, 255, 255, 0)); }
+  .kind-mac .glow { width: calc(var(--u) * 1100px); height: calc(var(--u) * 900px); }
+
+  .caption { position: relative; z-index: 3; text-align: center; padding: calc(var(--u) * 54px) calc(var(--u) * 26px) 0; }
+  .kind-mac .caption { padding-top: calc(var(--u) * 44px); }
+  .kicker { font-weight: 800; font-size: calc(var(--u) * 12.5px); letter-spacing: .16em; text-transform: uppercase; color: var(--yellow); }
+  .theme-yellow .kicker { color: rgba(0, 0, 0, .62); }
+  .caption h1 { font-family: var(--rounded); font-weight: 900; font-size: calc(var(--u) * 37px); line-height: 1.04;
+                letter-spacing: -.012em; margin-top: calc(var(--u) * 10px); text-wrap: balance; }
+  .caption h1 em { font-style: normal; color: var(--yellow); display: inline-block; }
+  .theme-yellow .caption h1 em { color: #000; }
+  .caption p { font-size: calc(var(--u) * 15.5px); line-height: 1.38; font-weight: 500; color: rgba(255, 255, 255, .68);
+               margin: calc(var(--u) * 12px) auto 0; max-width: calc(var(--u) * 380px); text-wrap: balance; }
+  .theme-yellow .caption p { color: rgba(0, 0, 0, .72); }
+  .kind-mac .caption h1 { font-size: calc(var(--u) * 44px); }
+  .kind-mac .caption p { max-width: none; }
+
+  .stage { position: absolute; inset: 0; z-index: 2; }
+  .placed { position: absolute; }
+  .callout { position: absolute; z-index: 5; display: flex; align-items: center; gap: calc(var(--u) * 10px);
+             background: #fff; color: #000; border-radius: calc(var(--u) * 18px); padding: calc(var(--u) * 10px) calc(var(--u) * 16px) calc(var(--u) * 10px) calc(var(--u) * 10px);
+             box-shadow: 0 calc(var(--u) * 14px) calc(var(--u) * 34px) rgba(0, 0, 0, .45); }
+  .callout-icon { width: calc(var(--u) * 40px); height: calc(var(--u) * 40px); border-radius: 50%; background: var(--yellow); display: grid; place-items: center; }
+  .callout-icon svg { width: calc(var(--u) * 22px); height: calc(var(--u) * 22px); }
+  .callout-title { font-family: var(--rounded); font-weight: 900; font-size: calc(var(--u) * 16px); line-height: 1.15; }
+  .callout-body { font-size: calc(var(--u) * 12px); font-weight: 500; color: rgba(0, 0, 0, .6); }
+
+  /* ---------- Device mockups ---------- */
+  .device { position: relative; background: linear-gradient(135deg, #2a2a2c 0%, #77777c 18%, #3a3a3d 40%, #2a2a2c 60%, #6b6b70 82%, #2a2a2c 100%);
+            box-shadow: 0 40px 90px rgba(0, 0, 0, .55), 0 0 0 1px rgba(255, 255, 255, .08); }
+  .theme-yellow .device { box-shadow: 0 40px 90px rgba(80, 50, 0, .45); }
+  .device-bezel { background: #050505; height: 100%; }
+  .device-screen { position: relative; overflow: hidden; background: #000; }
+  .side-button { position: absolute; background: #4a4a4e; border-radius: 2px; }
+  .island { position: absolute; background: #000; border-radius: 999px; z-index: 20; }
+  .camera { position: absolute; z-index: 2; width: 6px; height: 6px; border-radius: 50%; background: #1d2230; box-shadow: inset 0 0 0 1px #2c3345; }
+
+  .mac-window { position: relative; overflow: hidden; border-radius: 16px; background: #000;
+                box-shadow: 0 0 0 1px rgba(255, 255, 255, .16), 0 36px 90px rgba(0, 0, 0, .6); }
+  .theme-yellow .mac-window { box-shadow: 0 0 0 1px rgba(0, 0, 0, .2), 0 36px 90px rgba(80, 50, 0, .45); }
+  .mac-titlebar { position: relative; display: flex; align-items: center; justify-content: center; background: rgb(36, 36, 38);
+                  border-bottom: 1px solid rgba(0, 0, 0, .7); font: 600 13px var(--ui); color: rgba(255, 255, 255, .85); }
+  .traffic { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); display: flex; gap: 8px; }
+  .traffic i { width: 12px; height: 12px; border-radius: 50%; }
+
+  /* ---------- App replica (ContentView) ---------- */
+  .app-screen { position: relative; overflow: hidden; color: #fff; font-family: var(--ui); }
+  .bg { position: absolute; inset: 0; display: flex; align-items: flex-end; }
+  .bg-fade { width: 100%; }
+  .geometry { position: absolute; display: flex; justify-content: center; }
+  .stage-col { display: flex; flex-direction: column; width: 100%; height: 100%; }
+  .header { position: relative; display: flex; align-items: center; gap: 10px; flex: none; }
+  .logo { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; flex: none; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; font-family: var(--rounded); font-weight: 900;
+           line-height: 1.2; white-space: nowrap; flex: none; min-width: 0; overflow: hidden; color: #fff; }
+  .badge span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .spacer { flex: 1 1 8px; min-width: 8px; }
+  .header-hint { flex: 0 100 auto; min-width: 0; font-size: 16px; font-weight: 600; color: rgba(255, 255, 255, .78);
+                 white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stage-icon-btn { width: 44px; height: 44px; border-radius: 50%; background: rgba(255, 255, 255, .1); display: grid; place-items: center; flex: none; }
+  .timer-box { flex: 1 1 0; min-height: 0; display: flex; align-items: center; justify-content: center; }
+  .timer-stack { display: flex; flex-direction: column; align-items: center; }
+  .timer-text { font-family: var(--rounded); font-weight: 900; line-height: 1.19; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .timer-sub { font-family: var(--rounded); font-weight: 900; font-size: 28px; line-height: 1.19; color: rgba(255, 255, 255, .84); }
+  .progress { position: relative; height: 4px; flex: none; }
+  .progress-bar { position: absolute; left: 0; right: 0; border-radius: 999px; overflow: hidden; }
+  .progress-bar > div { height: 100%; border-radius: 999px; }
+  .bottom { display: flex; flex-direction: column; flex: none; }
+  .bottom.wide { flex-direction: row; justify-content: center; align-items: center; }
+  .controls { display: flex; gap: 10px; border-radius: 8px; }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 7px; border-radius: 999px; font-size: 17px; font-weight: 700; box-sizing: content-box; padding: 12px 18px; }
+  .btn.prominent { flex: 1; color: #fff; }
+  .btn.bordered { background: rgba(255, 189, 41, .16); }
+  .btn.bordered.disabled { background: rgba(120, 120, 128, .12); }
+  .remote-hint { display: flex; gap: 10px; align-items: flex-start; background: rgba(255, 255, 255, .08); border-radius: 8px; }
+  .remote-hint-icon { width: 28px; display: flex; justify-content: center; flex: none; }
+  .remote-hint-title { font-size: 17px; font-weight: 600; line-height: 22px; }
+  .remote-hint-body { font-size: 13px; line-height: 18px; color: rgba(255, 255, 255, .82); margin-top: 3px; }
+  .home-indicator { position: absolute; left: 50%; bottom: 8px; width: 146px; height: 5px; border-radius: 3px; transform: translateX(-50%); z-index: 30; }
+
+  .statusbar { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; z-index: 10; font-weight: 600; }
+  .statusbar.phone { height: 62px; font-size: 17px; }
+  .statusbar.phone > * { width: 157px; display: flex; justify-content: center; align-items: center; gap: 6px; }
+  .statusbar.phone > .sb-icons { margin-left: auto; }
+  .statusbar.tablet { height: 24px; font-size: 13px; justify-content: space-between; padding: 0 22px; }
+  .statusbar.tablet .sb-icons { display: flex; align-items: center; gap: 6px; }
+
+  /* Settings sheet (dark appearance) */
+  .dim { position: absolute; inset: 0; z-index: 40; }
+  .sheet { position: absolute; z-index: 41; background: rgb(28, 28, 30); overflow: hidden; color: #fff;
+           box-shadow: 0 0 0 .5px rgba(255, 255, 255, .12), 0 -6px 40px rgba(0, 0, 0, .5); }
+  .grabber { width: 36px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, .28); margin: 6px auto 0; }
+  .sheet-nav { height: 54px; display: flex; justify-content: flex-end; align-items: center; padding: 0 16px; }
+  .glass-done { height: 44px; padding: 0 18px; border-radius: 22px; background: var(--yellow); color: #fff; font-weight: 600; font-size: 17px; display: grid; place-items: center; }
+  .sheet-title { font-size: 34px; font-weight: 700; padding: 0 20px 4px; letter-spacing: .01em; }
+  .form { padding: 0 16px 24px; }
+  .form-header { font-size: 13px; text-transform: uppercase; color: rgba(235, 235, 245, .6); padding: 18px 20px 7px; }
+  .form-section { background: rgb(44, 44, 46); border-radius: 26px; overflow: hidden; }
+  .form-row { position: relative; min-height: 52px; display: flex; align-items: center; gap: 12px; padding: 0 20px; font-size: 17px; }
+  .form-row + .form-row::before { content: ''; position: absolute; top: 0; left: 20px; right: 0; height: 1px; transform: scaleY(.5); background: rgba(84, 84, 88, .9); }
+  .form-row.multi { padding-top: 11px; padding-bottom: 11px; }
+  .form-value { margin-left: auto; color: rgba(235, 235, 245, .6); font-variant-numeric: tabular-nums; }
+  .stepper { display: flex; align-items: center; height: 32px; border-radius: 16px; background: rgba(118, 118, 128, .24); flex: none; }
+  .stepper span { width: 46px; text-align: center; font-size: 22px; line-height: 32px; font-weight: 500; }
+  .stepper i { width: 1px; height: 18px; background: rgba(255, 255, 255, .2); }
+  .form-label { display: flex; align-items: center; gap: 14px; flex: 1; line-height: 1.25; }
+  .toggle { width: 62px; height: 28px; border-radius: 14px; background: rgb(48, 209, 88); position: relative; flex: none; }
+  .toggle div { position: absolute; right: 2px; top: 2px; width: 38px; height: 24px; border-radius: 12px; background: #fff; }
+</style>
+</head>
+<body>
+<div id="canvas"></div>
+<script src="icons.js"></script>
+<script>const LOGO_SRC = '../../Open%20Micer%20Timer/Assets.xcassets/TimerLogo.imageset/TimerLogo.png';</script>
+<script src="app.js"></script>
+<script src="devices.js"></script>
+<script src="slides.js"></script>
+<script>
+  (async () => {
+    const params = new URLSearchParams(location.search);
+    window.REAL_SCREEN = params.get('real');
+    const fonts = ['900 40px Nunito', '800 40px Nunito', '400 16px Inter', '500 16px Inter', '600 16px Inter', '700 16px Inter', '800 16px Inter'];
+    await Promise.all(fonts.map((f) => document.fonts.load(f).catch(() => null)));
+    try {
+      await renderSlide(params.get('canvas') || 'iPhone-6.5_1284x2778', params.get('slide') || '01-giant-countdown');
+      window.__ready = true;
+    } catch (e) {
+      window.__error = String(e.stack || e);
+    }
+  })();
+</script>
+</body>
+</html>

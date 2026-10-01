@@ -1,0 +1,11 @@
+{
+  "name": "open-micer-timer-screenshots",
+  "private": true,
+  "description": "Renders App Store screenshots for Open Micer Timer",
+  "scripts": {
+    "render": "node render.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.56.1"
+  }
+}

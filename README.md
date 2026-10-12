@@ -6,7 +6,7 @@
 
 <p align="center">
   <b>A giant, hands-free stage timer for open mics, comedy sets and talks.</b><br>
-  iPhone · iPad · Mac · Vision Pro — built with SwiftUI
+  iPhone · iPad · Mac — built with SwiftUI
 </p>
 
 <p align="center">
@@ -67,14 +67,14 @@ The host lights you, you lose track of time, you run long. Open Micer Timer puts
 
 ## Build & run
 
-Requirements: Xcode 26+, deployment target iOS / iPadOS / macOS / visionOS 26.1.
+Requirements: Xcode 26+, deployment target iOS / iPadOS / macOS 26.1.
 
 ```sh
 git clone https://github.com/taylordrew4u2/Open-Micer-Timer.git
 open "Open-Micer-Timer/Open Micer Timer.xcodeproj"
 ```
 
-Pick an iPhone, iPad, My Mac or Vision Pro destination and press **⌘R**.
+Pick an iPhone, iPad or My Mac destination and press **⌘R**.
 
 ## Project layout
 
